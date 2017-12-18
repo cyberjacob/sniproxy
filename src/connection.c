@@ -132,6 +132,17 @@ accept_connection(struct Listener *listener, struct ev_loop *loop) {
     fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
 #endif
 
+    if (getsockname(sockfd, (struct sockaddr *)&con->client.local_addr,
+                &con->client.local_addr_len) != 0) {
+        int saved_errno = errno;
+
+        warn("getsockname failed: %s", strerror(errno));
+        free_connection(con);
+
+        errno = saved_errno;
+        return 0;
+    }
+
     /* Avoiding type-punned pointer warning */
     struct ev_io *client_watcher = &con->client.watcher;
     ev_io_init(client_watcher, connection_cb, sockfd, EV_READ);
@@ -589,6 +600,15 @@ initiate_server_connect(struct Connection *con, struct ev_loop *loop) {
         return;
     }
 
+    if (getsockname(sockfd, (struct sockaddr *)&con->server.local_addr,
+                &con->server.local_addr_len) != 0) {
+        close(sockfd);
+        warn("getsockname failed: %s", strerror(errno));
+
+        abort_connection(con);
+        return;
+    }
+
     struct ev_io *server_watcher = &con->server.watcher;
     ev_io_init(server_watcher, connection_cb, sockfd, EV_WRITE);
     con->server.watcher.data = con;
@@ -715,7 +735,7 @@ log_connection(struct Connection *con) {
         duration = con->server.buffer->last_recv - con->established_timestamp;
 
     display_sockaddr(&con->client.addr, client_address, sizeof(client_address));
-    display_address(con->listener->address, listener_address, sizeof(listener_address));
+    display_sockaddr(&con->client.local_addr, listener_address, sizeof(listener_address));
     display_sockaddr(&con->server.addr, server_address, sizeof(server_address));
 
     log_msg(con->listener->access_log,
