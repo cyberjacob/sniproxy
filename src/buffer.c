@@ -260,6 +260,11 @@ buffer_pop(struct Buffer *src, void *dst, size_t len) {
     return bytes;
 }
 
+void
+buffer_skip(struct Buffer *src, size_t len) {
+    advance_read_position(src, len);
+}
+
 size_t
 buffer_push(struct Buffer *dst, const void *src, size_t len) {
     struct iovec iov[2];
