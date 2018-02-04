@@ -1,0 +1,11 @@
+[Unit]
+Description=Proxies incoming HTTP and TLS connections based on the hostname contained in the initial request.
+After=network.target
+
+[Service]
+PIDFile=/var/run/sniproxy.pid
+ExecStart=/usr/sbin/sniproxy
+
+
+[Install]
+WantedBy=multi-user.target
